@@ -5,6 +5,9 @@ import MessageItem from './MessageItem'
 import SystemRoleSettings from './SystemRoleSettings'
 import { generateSignature } from '@/utils/auth'
 import { useThrottleFn } from 'solidjs-use'
+import Settings from './Settings'
+import Alert, { setShowAlert, setAlertMessage } from './Alert'
+import { apiKey, apiBaseUrl, setupLocalStorageListener, setApiKey, setApiBaseUrl } from '@/store/settings'
 
 export default () => {
   let inputRef: HTMLTextAreaElement
@@ -15,6 +18,8 @@ export default () => {
   const [loading, setLoading] = createSignal(false)
   const [controller, setController] = createSignal<AbortController>(null)
 
+  // 设置 localStorage 监听器
+  setupLocalStorageListener()
 
   onMount(() => {
     try {
@@ -32,6 +37,10 @@ export default () => {
     onCleanup(() => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
     })
+
+    // 确保在组件加载时更新信号
+    setApiKey(localStorage.getItem('apiKey') || '')
+    setApiBaseUrl(localStorage.getItem('apiBaseUrl') || '')
   })
 
   const handleBeforeUnload = () => {
@@ -62,6 +71,19 @@ export default () => {
   }, 300, false, true)
 
   const requestWithLatestMessage = async () => {
+    const currentApiKey = apiKey().trim();
+    const currentApiBaseUrl = apiBaseUrl().trim();
+
+    console.log('Current API Key:', currentApiKey); // 调试输出
+    console.log('Current API Base URL:', currentApiBaseUrl); // 调试输出
+
+    // 检查是否已设置 API 信息
+    if (!currentApiKey || !currentApiBaseUrl) {
+      setAlertMessage('请先在设置中配置有效的 API 信息！');
+      setShowAlert(true);
+      return;
+    }
+
     setLoading(true)
     setCurrentAssistantMessage('')
     const storagePassword = localStorage.getItem('pass')
@@ -176,6 +198,10 @@ export default () => {
 
   return (
     <div my-6>
+      <Alert />
+      <div class="flex justify-end mb-4">
+        <Settings />
+      </div>
       <SystemRoleSettings
         canEdit={() => messageList().length === 0}
         systemRoleEditing={systemRoleEditing}
@@ -201,12 +227,12 @@ export default () => {
       )}
       <Show
         when={!loading()}
-        fallback={() => (
+        fallback={
           <div class="gen-cb-wrapper">
             <span>AI is thinking...</span>
             <div class="gen-cb-stop" onClick={stopStreamFetch}>Stop</div>
           </div>
-        )}
+        }
       >
         <div class="gen-text-wrapper" class:op-50={systemRoleEditing()}>
           <textarea

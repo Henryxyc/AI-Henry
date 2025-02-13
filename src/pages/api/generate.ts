@@ -11,6 +11,7 @@ const baseUrl = (import.meta.env.OPENAI_API_BASE_URL || 'https://api.openai.com'
 const sitePassword = import.meta.env.SITE_PASSWORD
 
 export const post: APIRoute = async (context) => {
+  console.log(baseUrl);
   const body = await context.request.json()
   const { sign, time, messages, pass } = body
   if (!messages) {
